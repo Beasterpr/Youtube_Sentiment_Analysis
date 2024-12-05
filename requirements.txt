@@ -1,0 +1,5 @@
+google-api-python-client
+nltk
+pandas
+streamlit
+plotly
