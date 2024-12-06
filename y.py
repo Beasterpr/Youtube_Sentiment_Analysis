@@ -10,6 +10,7 @@ import plotly.express as px
 nltk.download('vader_lexicon')
 
 # Function to fetch comments from YouTube
+
 def comment_fetch(video_id, api_key):
     try:
         youtube = build('youtube', "v3", developerKey=api_key)
@@ -39,6 +40,10 @@ def comment_fetch(video_id, api_key):
     except Exception as e:
         st.error(f"Error fetching comments: {e}")
         return []
+    
+
+def get_sentiment_analyzer():
+    return SentimentIntensityAnalyzer()
 
 # Function to perform sentiment analysis
 def sentiment_analyser(comment):
@@ -58,7 +63,7 @@ st.set_page_config(
     page_title="YouTube Sentiment Analysis",
     page_icon="🎥",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -72,7 +77,7 @@ st.sidebar.info("Enter YouTube Video ID and API Key to start analyzing.")
 video_id = st.sidebar.text_input("🔗 YouTube Video ID:" , help= "Enter the unique ID of the video. You can find it in the URL of the video. For example, in the URL https://www.youtube.com/watch?v=dQw4w9WgXcQ, the video ID is 'dQw4w9WgXcQ'.")
 api_key = st.sidebar.text_input("🔑 YouTube API Key:", type="password" , help="Enter your YouTube Data API key to fetch comments from YouTube. You need to create a project in the Google Cloud Console and enable the YouTube Data API v3 to get your API key. For help, follow these steps:\n\n1. Go to the [Google Cloud Console](https://console.cloud.google.com/).\n2. Create a new project.\n3. Go to 'APIs & Services' > 'Library' and enable 'YouTube Data API v3'.\n4. Go to 'APIs & Services' > 'Credentials' and create a new API key.\n5. Paste the API key here.")
 
-# Section Divider for neatness
+
 
 
 # If inputs are provided
@@ -82,23 +87,22 @@ if video_id and api_key:
         comments_data = comment_fetch(video_id, api_key)
 
         if comments_data:
-            # Prepare data
-            df = pd.DataFrame(comments_data)
-            sid = SentimentIntensityAnalyzer()
-            df['compound'] = df['Comment'].apply(lambda x: sid.polarity_scores(x)['compound'])
-            df["Published_At"] = pd.to_datetime(df["Published_At"])
-            df["Sentiment"] = df['Comment'].apply(sentiment_analyser)
+           
+            def process_comments(comments):
+                df = pd.DataFrame(comments)
+                sid = get_sentiment_analyzer()
+                df['compound'] = df['Comment'].apply(lambda x: sid.polarity_scores(x)['compound'])
+                df["Published_At"] = pd.to_datetime(df["Published_At"])
+                df["Sentiment"] = df['Comment'].apply(sentiment_analyser)
+                return df
+            
+            df = process_comments(comments_data)
 
             st.divider()
 
             # Main Section
             st.header("📊 **Analysis Results**")
 
-            
-            # Display DataFrame and Pie Chart side by side
-           
-
-            
             st.subheader("💬 Comments and Sentiments")
             st.dataframe(df, use_container_width=True)
             st.divider()
@@ -153,4 +157,6 @@ else:
     st.sidebar.warning("⚠️ Please enter valid inputs in the sidebar to proceed.")
 
 # Footer
-st.sidebar.markdown("🛠️ Built with ❤️ using Streamlit.")
+st.sidebar.markdown("© 2024 By [Ammar](https://www.instagram.com/sk_.ammar?igsh=ZmJyczE3dzlsc2d6). Built with Streamlit.", unsafe_allow_html=True)
+
+
