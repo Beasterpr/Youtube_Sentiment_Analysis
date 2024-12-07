@@ -1,3 +1,5 @@
+## Importing Library Phase (Step 1)
+
 import streamlit as st
 from googleapiclient.discovery import build
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -5,11 +7,14 @@ import pandas as pd
 import re
 import nltk
 import plotly.express as px
+from nltk.corpus import stopwords
 
-# Download the VADER lexicon
-nltk.download('vader_lexicon')
 
-# Function to fetch comments from YouTube
+nltk.download("stopwords")          ## Use to download stopword.Which is used to remove the stopwords like (is,or,them) to avoid the noise in data and make the accuracy more.
+nltk.download('vader_lexicon')      ## Because of this our Vader provide a judgement over a comment(positive,negative,neutral)
+
+
+## Function to fetch Youtube comment and date of comment using API. (Step 2)
 
 def comment_fetch(video_id, api_key):
     try:
@@ -42,10 +47,10 @@ def comment_fetch(video_id, api_key):
         return []
     
 
-def get_sentiment_analyzer():
-    return SentimentIntensityAnalyzer()
 
-# Function to perform sentiment analysis
+
+## To create a sentiment analysis Function (Step 3)
+
 def sentiment_analyser(comment):
     if not isinstance(comment, str):
         return "Invalid Comment"
@@ -58,14 +63,16 @@ def sentiment_analyser(comment):
     else:
         return "Neutral"
 
-# Streamlit page configuration
+
+
+## Creation StreamLit App (Main Step 4)
+
 st.set_page_config(
     page_title="YouTube Sentiment Analysis",
     page_icon="🎥",
     layout="wide",
     initial_sidebar_state="auto",
 )
-
 
 # App Header
 st.title("🎬 **YouTube Comment Sentiment Analysis**")
@@ -77,9 +84,6 @@ st.sidebar.info("Enter YouTube Video ID and API Key to start analyzing.")
 video_id = st.sidebar.text_input("🔗 YouTube Video ID:" , help= "Enter the unique ID of the video. You can find it in the URL of the video. For example, in the URL https://www.youtube.com/watch?v=dQw4w9WgXcQ, the video ID is 'dQw4w9WgXcQ'.")
 api_key = st.sidebar.text_input("🔑 YouTube API Key:", type="password" , help="Enter your YouTube Data API key to fetch comments from YouTube. You need to create a project in the Google Cloud Console and enable the YouTube Data API v3 to get your API key. For help, follow these steps:\n\n1. Go to the [Google Cloud Console](https://console.cloud.google.com/).\n2. Create a new project.\n3. Go to 'APIs & Services' > 'Library' and enable 'YouTube Data API v3'.\n4. Go to 'APIs & Services' > 'Credentials' and create a new API key.\n5. Paste the API key here.")
 
-
-
-
 # If inputs are provided
 if video_id and api_key:
     st.write("🚀 **Fetching comments... This may take a while.**")
@@ -87,32 +91,39 @@ if video_id and api_key:
         comments_data = comment_fetch(video_id, api_key)
 
         if comments_data:
-           
             def process_comments(comments):
                 df = pd.DataFrame(comments)
-                sid = get_sentiment_analyzer()
+                sid = SentimentIntensityAnalyzer()
                 df['compound'] = df['Comment'].apply(lambda x: sid.polarity_scores(x)['compound'])
                 df["Published_At"] = pd.to_datetime(df["Published_At"])
-                df["Sentiment"] = df['Comment'].apply(sentiment_analyser)
+                stopword = set(stopwords.words("english"))
+                clean_comment = [
+                ' '.join([
+                    word for word in re.sub(r"@\w+|http\S+|www\S+|[^a-zA-Z\s]","",comment).lower().split()
+                    if word not in stopword
+                    ])
+                    for comment in df["Comment"]
+                    ]
+                df["Sentiment"] = [sentiment_analyser(com) for com in clean_comment]
                 return df
             
             df = process_comments(comments_data)
 
             st.divider()
 
-            # Main Section
             st.header("📊 **Analysis Results**")
 
             st.subheader("💬 Comments and Sentiments")
             st.dataframe(df, use_container_width=True)
             st.divider()
 
+            # Bar Chart
             st.subheader("Sentiment Distribution")
             st.markdown("Show the Distibution of Sentiment")
             sentiment_counts = df["Sentiment"].value_counts()
             st.bar_chart(sentiment_counts)
 
-            
+            # Pie Chart
             st.subheader("📈 Sentiment Distribution:")
             st.markdown("**Show the Percantage of Sentiment**")
             col1,col2,col3 = st.columns([1,2,1])
@@ -125,16 +136,13 @@ if video_id and api_key:
             with col2:
                 st.plotly_chart(fig)
 
-          
-
-            # Sentiment Over Time (Line Chart)
+            # Line Chart
             st.header("**Sentiment Over Time:**")
             st.markdown("**Show how Sentiment of people Changes over Time**")
             df['Date'] = pd.to_datetime(df["Published_At"])
             senti = df.groupby("Date")['compound'].mean().reset_index()
             st.line_chart(data = senti,x = 'Date',y = 'compound')
             st.divider()
-
 
             # Highlight Positive and Negative Comments
             st.header("**Highlighted Comments**")
