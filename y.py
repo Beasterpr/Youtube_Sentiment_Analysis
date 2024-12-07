@@ -75,7 +75,7 @@ st.set_page_config(
 )
 
 # App Header
-st.title("🎬 **YouTube Comment Sentiment Analysis**")
+st.title("🎬 **YouTube Comment Sentiment Analysis ammar**")
 st.caption("Gain insights into the sentiment of YouTube comments")
 
 # Sidebar for inputs
