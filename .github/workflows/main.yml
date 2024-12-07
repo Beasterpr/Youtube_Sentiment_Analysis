@@ -22,7 +22,3 @@ jobs:
       run: |
         python -m pip install --upgrade pip  # Upgrade pip to the latest version
         pip install -r requirements.txt  # Install dependencies listed in requirements.txt
-
-    - name: Deploy to Streamlit Cloud
-      run: |
-        curl -X POST https://share.streamlit.io/deploy -F 'app="y.py"' -F 'repo=https://github.com/Beasterpr/Youtube_Sentiment_Analysis.git'  
